@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Race Countdown</title>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      body {
+        background-color: black;
+        color: white;
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #countdown {
+        font-size: 35vw;
+        font-weight: bold;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="countdown">--:--</div>
+    <button id="fullscreen-btn">Full screen</button>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/events.js"></script>
+    <script>
+      const socket = io(); // connect to the server
+
+      function formatTime(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const leftover = seconds % 60;
+        return `${minutes}:${String(leftover).padStart(2, "0")}`;
+      }
+
+      socket.on(EVENTS.TIMER, (data) => {
+        document.getElementById("countdown").textContent = formatTime(
+          data.remainingMs,
+        );
+      });
+    </script>
+    <script src="/fullscreen.js"></script>
+    <script src="/connection.js"></script>
+  </body>
+</html>

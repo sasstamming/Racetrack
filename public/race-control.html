@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Race Control - Safety Official</title>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      body {
+        background-color: #121212;
+        color: #f0f0f0;
+        font-family: system-ui, -apple-system, sans-serif;
+        margin: 0;
+        padding: 16px;
+        box-sizing: border-box;
+      }
+
+      /* Mobile First Container */
+      .app-container {
+        max-width: 500px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      /* Auth Overlay */
+      #auth-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.95);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        z-index: 999;
+      }
+
+      .auth-card {
+        background: #1e1e1e;
+        padding: 28px;
+        border-radius: 12px;
+        border: 1px solid #333;
+        width: 100%;
+        max-width: 380px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      }
+
+      .auth-card h2 {
+        margin: 0 0 8px 0;
+        color: #fff;
+        font-size: 1.4rem;
+      }
+
+      .auth-input-group {
+        margin-bottom: 16px;
+      }
+
+      .auth-input-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #aaa;
+        font-size: 0.9rem;
+      }
+
+      .auth-input-group input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #444;
+        background: #2a2a2a;
+        color: #fff;
+        font-size: 1rem;
+        box-sizing: border-box;
+      }
+
+      .auth-error {
+        color: #ff5252;
+        margin-bottom: 14px;
+        font-size: 0.9rem;
+        display: none;
+      }
+
+      /* Header & Status Cards */
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #2d2d2d;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 700;
+      }
+
+      .status-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 12px;
+        text-transform: uppercase;
+      }
+
+      .status-idle {
+        background: #333;
+        color: #aaa;
+      }
+
+      .status-running {
+        background: #2e7d32;
+        color: #fff;
+      }
+
+      .status-finished {
+        background: #e65100;
+        color: #fff;
+      }
+
+      .card {
+        background: #1e1e1e;
+        border: 1px solid #2d2d2d;
+        border-radius: 10px;
+        padding: 16px;
+      }
+
+      .timer-display {
+        text-align: center;
+        font-size: 3.5rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        padding: 8px 0;
+        letter-spacing: -1px;
+      }
+
+      /* Buttons */
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+        box-sizing: border-box;
+        transition: transform 0.1s, opacity 0.2s;
+        touch-action: manipulation;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .btn-start {
+        background: #0070f3;
+        color: white;
+        font-size: 1.3rem;
+        padding: 20px;
+      }
+
+      .btn-end {
+        background: #e65100;
+        color: white;
+        font-size: 1.2rem;
+        padding: 18px;
+      }
+
+      /* Mode Control Grid */
+      .mode-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .btn-mode {
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.2rem;
+        border: 3px solid transparent;
+      }
+
+      .btn-mode.active {
+        border-color: #fff;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+      }
+
+      .btn-safe {
+        background: #2e7d32;
+        color: white;
+      }
+
+      .btn-hazard {
+        background: #ffd600;
+        color: black;
+      }
+
+      .btn-danger {
+        background: #d50000;
+        color: white;
+      }
+
+      .btn-finish {
+        background: repeating-conic-gradient(black 0% 25%, white 0% 50%);
+        background-size: 30px 30px;
+        color: black;
+      }
+
+      .btn-finish span {
+        background: white;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+
+      .driver-badge {
+        display: inline-block;
+        background: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin: 4px;
+        font-size: 0.9rem;
+      }
+
+      .driver-badge strong {
+        color: #ff9800;
+        margin-right: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Auth Overlay -->
+    <div id="auth-overlay">
+      <div class="auth-card">
+        <h2>Race Control Login</h2>
+        <p style="color: #888; font-size: 0.9rem">Please enter the safety official access key.</p>
+        <div id="auth-error" class="auth-error"></div>
+        <form id="auth-form">
+          <div class="auth-input-group">
+            <label for="access-key">Safety Key</label>
+            <input type="password" id="access-key" placeholder="Enter key..." required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-start" style="padding: 14px">Unlock Controls</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="main-content" class="app-container" style="display: none">
+      <header>
+        <div>
+          <h1>Race Control</h1>
+          <div style="color: #888; font-size: 0.8rem">Safety Official</div>
+        </div>
+        <div id="race-status-pill" class="status-pill status-idle">Idle</div>
+      </header>
+
+      <!-- Timer Card -->
+      <div class="card" id="timer-card">
+        <div style="font-size: 0.85rem; color: #888; text-align: center">RACE TIMER</div>
+        <div id="timer-display" class="timer-display">--:--</div>
+      </div>
+
+      <!-- Section: Start Race (Shown when idle) -->
+      <div id="start-section" class="card">
+        <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 1.1rem">Next Race Session</h3>
+        <div id="briefing-info" style="margin-bottom: 16px; color: #aaa; font-size: 0.95rem">
+          Loading upcoming session...
+        </div>
+        <button id="start-btn" class="btn btn-start">START RACE</button>
+      </div>
+
+      <!-- Section: Race Mode Controls (Shown when running) -->
+      <div id="modes-section" class="card" style="display: none">
+        <div style="font-size: 0.85rem; color: #888; margin-bottom: 12px">ACTIVE RACE MODES</div>
+        <div class="mode-grid">
+          <button class="btn btn-mode btn-safe" id="mode-safe" onclick="setMode('safe')">SAFE</button>
+          <button class="btn btn-mode btn-hazard" id="mode-hazard" onclick="setMode('hazard')">HAZARD</button>
+          <button class="btn btn-mode btn-danger" id="mode-danger" onclick="setMode('danger')">DANGER</button>
+          <button class="btn btn-mode btn-finish" id="mode-finish" onclick="setMode('finish')"><span>FINISH</span></button>
+        </div>
+      </div>
+
+      <!-- Section: End Session (Shown when finished) -->
+      <div id="end-section" class="card" style="display: none">
+        <div style="text-align: center; margin-bottom: 14px">
+          <div style="font-size: 1.3rem; font-weight: bold; color: #ff9800; margin-bottom: 4px">Race Finished</div>
+          <div style="font-size: 0.9rem; color: #aaa">Wait until all cars return to the pit lane, then end the session.</div>
+        </div>
+        <button id="end-btn" class="btn btn-end">END RACE SESSION</button>
+      </div>
+
+      <!-- Active Drivers Card -->
+      <div class="card" id="drivers-card" style="display: none">
+        <div style="font-size: 0.85rem; color: #888; margin-bottom: 8px">CARS ON TRACK</div>
+        <div id="current-drivers-list"></div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/events.js"></script>
+    <script>
+      let socket = null;
+      let currentRace = null;
+      let upcomingSessions = [];
+
+      const authOverlay = document.getElementById("auth-overlay");
+      const authForm = document.getElementById("auth-form");
+      const authError = document.getElementById("auth-error");
+      const accessKeyInput = document.getElementById("access-key");
+      const mainContent = document.getElementById("main-content");
+
+      const raceStatusPill = document.getElementById("race-status-pill");
+      const timerDisplay = document.getElementById("timer-display");
+      const startSection = document.getElementById("start-section");
+      const modesSection = document.getElementById("modes-section");
+      const endSection = document.getElementById("end-section");
+      const briefingInfo = document.getElementById("briefing-info");
+      const startBtn = document.getElementById("start-btn");
+      const endBtn = document.getElementById("end-btn");
+      const driversCard = document.getElementById("drivers-card");
+      const currentDriversList = document.getElementById("current-drivers-list");
+
+      // Auto-connect with saved key
+      const savedKey = sessionStorage.getItem("raceControlKey");
+      if (savedKey) {
+        connectWithKey(savedKey);
+      }
+
+      authForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const key = accessKeyInput.value.trim();
+        if (key) connectWithKey(key);
+      });
+
+      function connectWithKey(key) {
+        authError.style.display = "none";
+        if (socket) socket.disconnect();
+
+        socket = io("/race-control", {
+          auth: { key },
+        });
+
+        socket.on("connect", () => {
+          sessionStorage.setItem("raceControlKey", key);
+          authOverlay.style.display = "none";
+          mainContent.style.display = "flex";
+          setupSocketListeners();
+        });
+
+        socket.on("connect_error", (err) => {
+          sessionStorage.removeItem("raceControlKey");
+          authOverlay.style.display = "flex";
+          mainContent.style.display = "none";
+          authError.textContent = err.message || "Invalid access key";
+          authError.style.display = "block";
+          accessKeyInput.value = "";
+          accessKeyInput.focus();
+        });
+      }
+
+      function setupSocketListeners() {
+        socket.on(EVENTS.RACE, (race) => {
+          currentRace = race;
+          renderState();
+        });
+
+        socket.on(EVENTS.TIMER, (timer) => {
+          renderTimer(timer.remainingMs);
+        });
+
+        socket.on(EVENTS.SESSIONS, (sessions) => {
+          upcomingSessions = sessions || [];
+          renderState();
+        });
+      }
+
+      function renderTimer(ms) {
+        if (ms === null || ms === undefined || ms < 0) {
+          timerDisplay.textContent = "--:--";
+          return;
+        }
+        const totalSec = Math.floor(ms / 1000);
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+        timerDisplay.textContent = `${mins}:${String(secs).padStart(2, "0")}`;
+      }
+
+      function renderState() {
+        if (!currentRace) return;
+
+        // Update Status Pill
+        raceStatusPill.className = `status-pill status-${currentRace.status}`;
+        raceStatusPill.textContent = currentRace.status.toUpperCase();
+
+        // 1. Idle state
+        if (currentRace.status === "idle") {
+          startSection.style.display = "block";
+          modesSection.style.display = "none";
+          endSection.style.display = "none";
+          driversCard.style.display = "none";
+
+          const nextSession = currentRace.next || (upcomingSessions.length > 0 ? upcomingSessions[0] : null);
+          if (!nextSession || !nextSession.drivers || nextSession.drivers.length === 0) {
+            briefingInfo.innerHTML = `<div style="color: #888; font-style: italic;">No upcoming races. Create a session at the Front Desk first.</div>`;
+            startBtn.disabled = true;
+          } else {
+            let driversHtml = `<div><strong>Session #${nextSession.id}</strong> (${nextSession.drivers.length} drivers):</div><div style="margin-top: 8px;">`;
+            nextSession.drivers.forEach((d) => {
+              driversHtml += `<span class="driver-badge"><strong>#${d.car}</strong> ${escapeHtml(d.name)}</span>`;
+            });
+            driversHtml += `</div>`;
+            briefingInfo.innerHTML = driversHtml;
+            startBtn.disabled = false;
+          }
+        }
+
+        // 2. Running state
+        else if (currentRace.status === "running") {
+          startSection.style.display = "none";
+          modesSection.style.display = "block";
+          endSection.style.display = "none";
+          driversCard.style.display = "block";
+
+          // Update active mode button
+          ["safe", "hazard", "danger", "finish"].forEach((mode) => {
+            const btn = document.getElementById(`mode-${mode}`);
+            if (btn) {
+              if (currentRace.mode === mode) {
+                btn.classList.add("active");
+              } else {
+                btn.classList.remove("active");
+              }
+            }
+          });
+
+          // Show active cars
+          renderCarsOnTrack();
+        }
+
+        // 3. Finished state
+        else if (currentRace.status === "finished") {
+          startSection.style.display = "none";
+          modesSection.style.display = "none";
+          endSection.style.display = "block";
+          driversCard.style.display = "block";
+
+          renderCarsOnTrack();
+        }
+      }
+
+      function renderCarsOnTrack() {
+        if (currentRace.current && currentRace.current.drivers) {
+          let html = "";
+          currentRace.current.drivers.forEach((d) => {
+            html += `<span class="driver-badge"><strong>#${d.car}</strong> ${escapeHtml(d.name)}</span>`;
+          });
+          currentDriversList.innerHTML = html;
+        } else {
+          currentDriversList.innerHTML = `<span style="color: #666;">No cars recorded</span>`;
+        }
+      }
+
+      startBtn.addEventListener("click", () => {
+        if (!confirm("Are you sure you want to start the race?")) return;
+        socket.emit(EVENTS.RACE_START, {}, (res) => {
+          if (!res || !res.ok) {
+            alert(res ? res.error : "Failed to start race");
+          }
+        });
+      });
+
+      function setMode(mode) {
+        socket.emit(EVENTS.RACE_MODE, { mode }, (res) => {
+          if (!res || !res.ok) {
+            alert(res ? res.error : "Failed to change race mode");
+          }
+        });
+      }
+
+      endBtn.addEventListener("click", () => {
+        if (!confirm("End this race session and return cars to pit?")) return;
+        socket.emit(EVENTS.RACE_END_SESSION, {}, (res) => {
+          if (!res || !res.ok) {
+            alert(res ? res.error : "Failed to end race session");
+          }
+        });
+      });
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    </script>
+    <script src="/connection.js"></script>
+  </body>
+</html>
+

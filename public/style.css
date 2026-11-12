@@ -1,0 +1,29 @@
+body {
+  margin: 0;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+#fullscreen-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+}
+
+:fullscreen #fullscreen-btn {
+  display: none;
+}
+
+#connection-notice {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 2vw 0;
+  text-align: center;
+  font-size: 3vw;
+  font-weight: bold;
+  background-color: darkred;
+  color: white;
+  z-index: 10;
+}

@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+  <head>
+    <title>LeaderBoard</title>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      body {
+        background-color: black;
+        color: white;
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 40px;
+      }
+
+      table {
+        font-size: 3vw;
+        color: white;
+      }
+      th,
+      td {
+        padding: 0.5vw 2vw;
+      }
+
+      #timer {
+        font-size: 6vw;
+        font-weight: bold;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #flag-status {
+        width: 100%;
+        text-align: center;
+        font-size: 4vw;
+        font-weight: bold;
+        padding: 1vw 0;
+      }
+
+      #flag-status.safe {
+        background-color: green;
+      }
+      #flag-status.hazard {
+        background-color: yellow;
+        color: black;
+      }
+      #flag-status.danger {
+        background-color: red;
+        color: black;
+      }
+      #flag-status.finish {
+        background: repeating-conic-gradient(black 0% 25%, white 0% 50%);
+        background-size: 40px 40px;
+        color: black;
+      }
+      #flag-status.finish #flag-text {
+        background-color: white;
+        color: black;
+        padding: 0 2vw;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="flag-status"><span id="flag-text"></span></div>
+    <div id="timer">--:--</div>
+    <table>
+      <thead>
+        <tr>
+          <th>POS</th>
+          <th>CAR</th>
+          <th>DRIVER</th>
+          <th>LAP</th>
+          <th>FASTEST</th>
+        </tr>
+      </thead>
+      <tbody id="results-list"></tbody>
+    </table>
+    <button id="fullscreen-btn">Full screen</button>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/events.js"></script>
+    <script>
+      const socket = io(); // connect to the server
+
+      function formatTime(ms) {
+        if (ms === null) {
+          return "--";
+        }
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const leftover = seconds % 60;
+        return `${minutes}:${String(leftover).padStart(2, "0")}`;
+      }
+
+      function formatLapTime(ms) {
+        if (ms === null) {
+          return "--";
+        }
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const leftover = seconds % 60;
+        const millis = ms % 1000;
+        return `${minutes}:${String(leftover).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+      }
+
+      socket.on(EVENTS.RACE, (data) => {
+        const flag = document.getElementById("flag-status");
+        flag.className = data.mode;
+        document.getElementById("flag-text").textContent =
+          data.mode.toUpperCase();
+
+        const list = document.getElementById("results-list");
+        list.innerHTML = "";
+
+        if (data.results.length === 0) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 5; //merge cells
+          cell.textContent = "No race results yet";
+          cell.style.fontStyle = "italic";
+          row.appendChild(cell);
+          list.appendChild(row);
+          return;
+        }
+
+        data.results.sort((a, b) => {
+          if (a.fastestLapMs === null) {
+            return 1; // a has no time → a should go AFTER b
+          }
+          if (b.fastestLapMs === null) {
+            return -1; // b has no time → a should go BEFORE b
+          }
+          return a.fastestLapMs - b.fastestLapMs; // both have times → compare
+        });
+
+        data.results.forEach((result, index) => {
+          const row = document.createElement("tr");
+
+          const values = [
+            index + 1,
+            result.car,
+            result.name,
+            result.lap,
+            formatLapTime(result.fastestLapMs),
+          ];
+
+          values.forEach((value) => {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.appendChild(cell);
+          });
+
+          list.appendChild(row);
+        });
+      });
+
+      socket.on(EVENTS.TIMER, (data) => {
+        document.getElementById("timer").textContent = formatTime(
+          data.remainingMs,
+        );
+      });
+    </script>
+    <script src="/fullscreen.js"></script>
+    <script src="/connection.js"></script>
+  </body>
+</html>

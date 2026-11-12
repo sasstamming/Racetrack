@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Next Race</title>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      body {
+        background-color: black;
+        color: white;
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 40px;
+      }
+
+      #paddock-message {
+        font-size: 5vw;
+        font-weight: bold;
+        color: yellow;
+      }
+
+      #driver-list {
+        font-size: 3vw;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="paddock-message">Proceed to the paddock</div>
+    <div id="driver-list"></div>
+    <button id="fullscreen-btn">Full screen</button>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/events.js"></script>
+    <script>
+      const socket = io(); // connect to the server
+
+      socket.on(EVENTS.RACE, (data) => {
+        const paddock = document.getElementById("paddock-message");
+        paddock.style.visibility = data.callToPaddock ? "visible" : "hidden";
+
+        const list = document.getElementById("driver-list");
+        list.innerHTML = "";
+
+        if (data.next === null) {
+          list.textContent = "No upcoming race";
+          return;
+        }
+
+        data.next.drivers.forEach((driver) => {
+          const row = document.createElement("div");
+          row.textContent = "Car " + driver.car + " - " + driver.name;
+          list.appendChild(row);
+        });
+      });
+    </script>
+    <script src="/fullscreen.js"></script>
+    <script src="/connection.js"></script>
+  </body>
+</html>

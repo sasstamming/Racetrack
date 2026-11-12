@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Lap Line Tracker - Lap-line Observer</title>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      * {
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+      }
+
+      body {
+        background-color: #121212;
+        color: #f0f0f0;
+        font-family: system-ui, -apple-system, sans-serif;
+        margin: 0;
+        padding: 12px;
+        box-sizing: border-box;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Auth Overlay */
+      #auth-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.95);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        z-index: 999;
+      }
+
+      .auth-card {
+        background: #1e1e1e;
+        padding: 32px;
+        border-radius: 12px;
+        border: 1px solid #333;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      }
+
+      .auth-card h2 {
+        margin: 0 0 10px 0;
+        color: #fff;
+        font-size: 1.5rem;
+      }
+
+      .auth-input-group {
+        margin-bottom: 20px;
+      }
+
+      .auth-input-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #aaa;
+        font-size: 0.9rem;
+      }
+
+      .auth-input-group input {
+        width: 100%;
+        padding: 14px;
+        border-radius: 6px;
+        border: 1px solid #444;
+        background: #2a2a2a;
+        color: #fff;
+        font-size: 1.1rem;
+        box-sizing: border-box;
+      }
+
+      .auth-error {
+        color: #ff5252;
+        margin-bottom: 16px;
+        font-size: 0.9rem;
+        display: none;
+      }
+
+      .btn-auth {
+        background: #0070f3;
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 6px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        width: 100%;
+        cursor: pointer;
+      }
+
+      /* Main Screen Header */
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 16px;
+        background: #1c1c1c;
+        border-radius: 8px;
+        border: 1px solid #2d2d2d;
+        margin-bottom: 12px;
+        flex-shrink: 0;
+      }
+
+      .header-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+
+      .header-status {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 1rem;
+      }
+
+      .flag-badge {
+        font-weight: bold;
+        padding: 4px 12px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+      }
+
+      .flag-safe {
+        background: #2e7d32;
+        color: white;
+      }
+      .flag-hazard {
+        background: #ffd600;
+        color: black;
+      }
+      .flag-danger {
+        background: #d50000;
+        color: white;
+      }
+      .flag-finish {
+        background: repeating-conic-gradient(black 0% 25%, white 0% 50%);
+        background-size: 20px 20px;
+        color: black;
+      }
+      .flag-finish span {
+        background: white;
+        padding: 2px 6px;
+        border-radius: 2px;
+      }
+
+      /* Grid of Huge Car Buttons */
+      #cars-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        overflow: hidden;
+      }
+
+      @media (orientation: landscape) {
+        #cars-grid {
+          grid-template-columns: repeat(4, 1fr);
+          grid-template-rows: repeat(2, 1fr);
+        }
+      }
+
+      @media (orientation: portrait) {
+        #cars-grid {
+          grid-template-columns: repeat(2, 1fr);
+          grid-template-rows: repeat(4, 1fr);
+        }
+      }
+
+      .car-btn {
+        background: #242424;
+        border: 3px solid #3d3d3d;
+        border-radius: 12px;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 12px;
+        position: relative;
+        transition: transform 0.05s, background-color 0.1s, border-color 0.1s;
+      }
+
+      .car-btn:active {
+        transform: scale(0.96);
+        background-color: #0070f3 !important;
+        border-color: #60a5fa !important;
+      }
+
+      .car-btn.flash {
+        background-color: #0070f3 !important;
+        border-color: #fff !important;
+      }
+
+      .car-btn.disabled,
+      .car-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        border-color: #2a2a2a;
+      }
+
+      .car-number {
+        font-size: clamp(3rem, 7vw, 5.5rem);
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 6px;
+        color: #ff9800;
+      }
+
+      .driver-name {
+        font-size: clamp(1rem, 2.5vw, 1.5rem);
+        font-weight: 700;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 90%;
+        margin-bottom: 4px;
+      }
+
+      .lap-info {
+        font-size: clamp(0.9rem, 2vw, 1.2rem);
+        color: #aaa;
+        font-weight: 600;
+      }
+
+      .lap-time {
+        font-size: clamp(0.75rem, 1.5vw, 1rem);
+        color: #4caf50;
+        margin-top: 2px;
+        font-family: monospace;
+      }
+
+      /* Empty or Inactive Notice */
+      #inactive-banner {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: #181818;
+        border: 2px dashed #333;
+        border-radius: 12px;
+        text-align: center;
+        padding: 30px;
+      }
+
+      #inactive-banner h2 {
+        font-size: 2rem;
+        margin-bottom: 8px;
+        color: #ff9800;
+      }
+
+      #inactive-banner p {
+        font-size: 1.2rem;
+        color: #888;
+        max-width: 500px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Auth Modal -->
+    <div id="auth-overlay">
+      <div class="auth-card">
+        <h2>Lap-Line Tracker Login</h2>
+        <p style="color: #888; font-size: 0.95rem">Please enter the observer access key.</p>
+        <div id="auth-error" class="auth-error"></div>
+        <form id="auth-form">
+          <div class="auth-input-group">
+            <label for="access-key">Observer Key</label>
+            <input type="password" id="access-key" placeholder="Enter key..." required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn-auth">Unlock Lap Tracker</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <header id="main-header" style="display: none">
+      <div class="header-title">Lap-Line Tracker</div>
+      <div class="header-status">
+        <div id="flag-indicator" class="flag-badge flag-danger">DANGER</div>
+        <div id="timer-display" style="font-weight: bold; font-family: monospace; font-size: 1.2rem">--:--</div>
+      </div>
+    </header>
+
+    <!-- Inactive Banner (when not running or finish mode) -->
+    <div id="inactive-banner" style="display: none">
+      <h2 id="inactive-title">Race Session Inactive</h2>
+      <p id="inactive-subtitle">Lap recording is disabled until the Safety Official starts the race.</p>
+    </div>
+
+    <!-- Active Cars Touch Grid -->
+    <main id="cars-grid" style="display: none">
+      <!-- Buttons rendered dynamically -->
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/events.js"></script>
+    <script>
+      let socket = null;
+      let currentRace = null;
+
+      const authOverlay = document.getElementById("auth-overlay");
+      const authForm = document.getElementById("auth-form");
+      const authError = document.getElementById("auth-error");
+      const accessKeyInput = document.getElementById("access-key");
+
+      const mainHeader = document.getElementById("main-header");
+      const flagIndicator = document.getElementById("flag-indicator");
+      const timerDisplay = document.getElementById("timer-display");
+      const inactiveBanner = document.getElementById("inactive-banner");
+      const inactiveTitle = document.getElementById("inactive-title");
+      const inactiveSubtitle = document.getElementById("inactive-subtitle");
+      const carsGrid = document.getElementById("cars-grid");
+
+      // Auto-connect with saved key
+      const savedKey = sessionStorage.getItem("lapLineKey");
+      if (savedKey) {
+        connectWithKey(savedKey);
+      }
+
+      authForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const key = accessKeyInput.value.trim();
+        if (key) connectWithKey(key);
+      });
+
+      function connectWithKey(key) {
+        authError.style.display = "none";
+        if (socket) socket.disconnect();
+
+        socket = io("/lap-line", {
+          auth: { key },
+        });
+
+        socket.on("connect", () => {
+          sessionStorage.setItem("lapLineKey", key);
+          authOverlay.style.display = "none";
+          mainHeader.style.display = "flex";
+          setupSocketListeners();
+        });
+
+        socket.on("connect_error", (err) => {
+          sessionStorage.removeItem("lapLineKey");
+          authOverlay.style.display = "flex";
+          mainHeader.style.display = "none";
+          carsGrid.style.display = "none";
+          inactiveBanner.style.display = "none";
+          authError.textContent = err.message || "Invalid access key";
+          authError.style.display = "block";
+          accessKeyInput.value = "";
+          accessKeyInput.focus();
+        });
+      }
+
+      function setupSocketListeners() {
+        socket.on(EVENTS.RACE, (race) => {
+          currentRace = race;
+          renderState();
+        });
+
+        socket.on(EVENTS.TIMER, (timer) => {
+          renderTimer(timer.remainingMs);
+        });
+      }
+
+      function renderTimer(ms) {
+        if (ms === null || ms === undefined || ms <= 0) {
+          timerDisplay.textContent = "0:00";
+          return;
+        }
+        const totalSec = Math.floor(ms / 1000);
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+        timerDisplay.textContent = `${mins}:${String(secs).padStart(2, "0")}`;
+      }
+
+      function formatLapTime(ms) {
+        if (!ms) return "--";
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const leftover = seconds % 60;
+        const millis = ms % 1000;
+        return `${minutes}:${String(leftover).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+      }
+
+      function renderState() {
+        if (!currentRace) return;
+
+        // Flag indicator in header
+        flagIndicator.className = `flag-badge flag-${currentRace.mode}`;
+        if (currentRace.mode === "finish") {
+          flagIndicator.innerHTML = `<span>FINISH</span>`;
+        } else {
+          flagIndicator.textContent = currentRace.mode.toUpperCase();
+        }
+
+        // Active race if running OR finished (in finish mode cars can still cross)
+        const isActiveRace = currentRace.status === "running" || (currentRace.status === "finished" && !currentRace.callToPaddock);
+
+        if (!isActiveRace || !currentRace.results || currentRace.results.length === 0) {
+          carsGrid.style.display = "none";
+          inactiveBanner.style.display = "flex";
+
+          if (currentRace.callToPaddock) {
+            inactiveTitle.textContent = "Race Session Ended";
+            inactiveSubtitle.textContent = "All cars have returned to the pit lane. Waiting for next race.";
+          } else {
+            inactiveTitle.textContent = "Track Idle";
+            inactiveSubtitle.textContent = "No active race. Lap buttons will appear when the Safety Official starts the race.";
+          }
+          return;
+        }
+
+        // Display Active Car Grid
+        inactiveBanner.style.display = "none";
+        carsGrid.style.display = "grid";
+
+        // Sort cars by car number 1..8
+        const sortedResults = [...currentRace.results].sort((a, b) => a.car - b.car);
+
+        // Update or create button for each car
+        carsGrid.innerHTML = "";
+        sortedResults.forEach((carResult) => {
+          const btn = document.createElement("button");
+          btn.className = "car-btn";
+          btn.id = `car-btn-${carResult.car}`;
+
+          const lapText = carResult.lap === 0 ? "Not Started" : `Lap ${carResult.lap}`;
+          const timeText = carResult.fastestLapMs ? `Fastest: ${formatLapTime(carResult.fastestLapMs)}` : "No full lap yet";
+
+          btn.innerHTML = `
+            <div class="car-number">#${carResult.car}</div>
+            <div class="driver-name">${escapeHtml(carResult.name)}</div>
+            <div class="lap-info">${lapText}</div>
+            <div class="lap-time">${timeText}</div>
+          `;
+
+          btn.addEventListener("click", () => recordLap(carResult.car, btn));
+          carsGrid.appendChild(btn);
+        });
+      }
+
+      function recordLap(carNumber, btnEl) {
+        // Instant visual feedback
+        btnEl.classList.add("flash");
+        setTimeout(() => btnEl.classList.remove("flash"), 150);
+
+        socket.emit(EVENTS.LAP_RECORD, { car: carNumber }, (res) => {
+          if (!res || !res.ok) {
+            console.error("Lap record error:", res ? res.error : "Unknown error");
+          }
+        });
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    </script>
+    <script src="/connection.js"></script>
+  </body>
+</html>
+

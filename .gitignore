@@ -1,0 +1,18 @@
+node_modules/
+.env
+state.json
+.idea/
+.DS_Store
+
+# Sisemised agendi tööriistad ja reeglid
+.agents/
+AGENTS.md
+
+JAOTUS.md
+SISU.md
+TESTING.md
+
+node_modules/
+.env
+node_modules/
+.env
